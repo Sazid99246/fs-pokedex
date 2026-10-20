@@ -15,6 +15,6 @@ jobs:
       - name: run date
         run: |
           date
-      - name: run ls -latest
+      - name: run ls -l
         run: |
           ls -l
