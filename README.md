@@ -28,3 +28,5 @@ Start by running `npm install` inside the project folder.
 ## Pull Request Practice
 
 This change is for practicing the GitHub pull request workflow.
+
+Deployment workflow verification.
