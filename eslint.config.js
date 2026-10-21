@@ -82,4 +82,15 @@ module.exports = [
       }
     }
   },
+  {
+    files: [
+      'e2e-tests/**/*.js',
+      'playwright.config.js'
+    ],
+    languageOptions: {
+      globals: {
+        ...globals.node
+      }
+    }
+  },
 ]
