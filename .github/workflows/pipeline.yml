@@ -31,3 +31,20 @@ jobs:
       - name: Trigger deployment
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: curl --fail --silent --show-error "${{ secrets.RENDER_DEPLOY_HOOK }}"
+  tag_release:
+    needs: [simple_deployment_pipeline]
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Bump version and push tag
+        uses: anothrNick/github-tag-action@1.75.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DEFAULT_BUMP: patch
