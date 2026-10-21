@@ -13,26 +13,52 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+
       - uses: actions/setup-node@v6
         with:
           node-version: '24'
+
       - name: Install dependencies
         run: npm install
+
       - name: Check style
         run: npm run eslint
-      - name: Run npm test
+
+      - name: Run unit tests
         run: npm test
-      - name: Run npm build
+
+      - name: Build application
         run: npm run build
+
+  end_to_end_tests:
+    needs: [simple_deployment_pipeline]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+
+      - name: Install dependencies
+        run: npm install
+
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
+
       - name: Run end-to-end tests
         run: npm run test:e2e
+
+  deploy_to_render:
+    needs: [end_to_end_tests]
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && !contains(github.event.head_commit.message, '#skip') }}
+    runs-on: ubuntu-latest
+    steps:
       - name: Trigger deployment
-        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && !contains(github.event.head_commit.message, '#skip') }}
         run: curl --fail --silent --show-error "${{ secrets.RENDER_DEPLOY_HOOK }}"
+
   tag_release:
-    needs: [simple_deployment_pipeline]
+    needs: [end_to_end_tests]
     if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && !contains(github.event.head_commit.message, '#skip') }}
     runs-on: ubuntu-latest
     permissions:
@@ -48,13 +74,18 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DEFAULT_BUMP: patch
+
   notify_discord:
-    needs: [simple_deployment_pipeline, tag_release]
+    needs:
+      - simple_deployment_pipeline
+      - end_to_end_tests
+      - deploy_to_render
+      - tag_release
     if: always()
     runs-on: ubuntu-latest
     steps:
       - name: Notify successful deployment
-        if: ${{ needs.simple_deployment_pipeline.result == 'success' && needs.tag_release.result == 'success' }}
+        if: ${{ needs.deploy_to_render.result == 'success' && needs.tag_release.result == 'success' }}
         uses: sarisia/actions-status-discord@v1
         with:
           webhook: ${{ secrets.DISCORD_WEBHOOK }}
@@ -68,7 +99,7 @@ jobs:
             Workflow: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
       - name: Notify build failure
-        if: ${{ needs.simple_deployment_pipeline.result == 'failure' || needs.tag_release.result == 'failure' }}
+        if: ${{ needs.simple_deployment_pipeline.result == 'failure' || needs.end_to_end_tests.result == 'failure' || needs.deploy_to_render.result == 'failure' || needs.tag_release.result == 'failure' }}
         uses: sarisia/actions-status-discord@v1
         with:
           webhook: ${{ secrets.DISCORD_WEBHOOK }}
