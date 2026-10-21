@@ -24,3 +24,7 @@ Start by running `npm install` inside the project folder.
 - `npm run build` to make a production build
 - `npm run start-prod` to run your production build
 - `npm run test:e2e` to run end-to-end tests
+
+## Pull Request Practice
+
+This change is for practicing the GitHub pull request workflow.
