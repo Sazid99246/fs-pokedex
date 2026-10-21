@@ -48,3 +48,36 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DEFAULT_BUMP: patch
+  notify_discord:
+    needs: [simple_deployment_pipeline, tag_release]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notify successful deployment
+        if: ${{ needs.simple_deployment_pipeline.result == 'success' && needs.tag_release.result == 'success' }}
+        uses: sarisia/actions-status-discord@v1
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}
+          status: Success
+          title: "Deployment successful"
+          description: |
+            A new version has been deployed successfully.
+            Repository: ${{ github.repository }}
+            Commit: ${{ github.sha }}
+            Message: ${{ github.event.head_commit.message }}
+            Workflow: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+      - name: Notify build failure
+        if: ${{ needs.simple_deployment_pipeline.result == 'failure' || needs.tag_release.result == 'failure' }}
+        uses: sarisia/actions-status-discord@v1
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}
+          status: Failure
+          title: "Build or deployment pipeline failed"
+          description: |
+            A workflow job failed. Please investigate.
+            Repository: ${{ github.repository }}
+            Commit SHA: ${{ github.sha }}
+            Commit message: ${{ github.event.head_commit.message }}
+            Commit details: ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}
+            Workflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
